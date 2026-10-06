@@ -1,0 +1,524 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EL DICCIONARIO DE jm_capitan — Buscador Interactivo</title>
+    <style>
+        :root {
+            --bg-primary: #0a1118;
+            --bg-card: #121e2b;
+            --accent-gold: #e5a93b;
+            --accent-blue: #1ba0e6;
+            --text-main: #ecf0f1;
+            --text-muted: #8a9ba8;
+            --border-color: #1f3144;
+            --row-hover: #182838;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        body {
+            background-color: var(--bg-primary);
+            color: var(--text-main);
+            padding: 20px;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 1200px;
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 24px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+        }
+
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 2px solid var(--accent-gold);
+            padding-bottom: 16px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+
+        h1 {
+            color: var(--accent-gold);
+            font-size: 1.8rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .subtitle {
+            color: var(--text-muted);
+            font-size: 0.9rem;
+        }
+
+        .controls {
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        @media (max-width: 768px) {
+            .controls {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .search-box, .filter-box {
+            position: relative;
+        }
+
+        input[type="text"], select {
+            width: 100%;
+            padding: 12px 16px;
+            background: var(--bg-primary);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            color: var(--text-main);
+            font-size: 1rem;
+            outline: none;
+            transition: all 0.2s ease;
+        }
+
+        input[type="text"]:focus, select:focus {
+            border-color: var(--accent-blue);
+            box-shadow: 0 0 8px rgba(27, 160, 230, 0.3);
+        }
+
+        .stats-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+            font-size: 0.9rem;
+            color: var(--text-muted);
+        }
+
+        .badge {
+            background: var(--accent-blue);
+            color: #fff;
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-weight: bold;
+        }
+
+        .table-container {
+            max-height: 60vh;
+            overflow-y: auto;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+        }
+
+        /* Personalización barra de desplazamiento */
+        .table-container::-webkit-scrollbar {
+            width: 8px;
+        }
+        .table-container::-webkit-scrollbar-track {
+            background: var(--bg-primary);
+        }
+        .table-container::-webkit-scrollbar-thumb {
+            background: var(--border-color);
+            border-radius: 4px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            text-align: left;
+        }
+
+        thead {
+            position: sticky;
+            top: 0;
+            background: #0d1722;
+            z-index: 10;
+        }
+
+        th {
+            padding: 14px 16px;
+            color: var(--accent-gold);
+            font-weight: 600;
+            border-bottom: 2px solid var(--border-color);
+            text-transform: uppercase;
+            font-size: 0.85rem;
+            letter-spacing: 0.5px;
+        }
+
+        td {
+            padding: 12px 16px;
+            border-bottom: 1px solid var(--border-color);
+            font-size: 0.95rem;
+        }
+
+        tbody tr:hover {
+            background-color: var(--row-hover);
+        }
+
+        .col-id { width: 60px; text-align: center; color: var(--text-muted); }
+        .col-term { width: 35%; color: var(--accent-blue); font-weight: 600; }
+        .col-es { width: 35%; }
+        .col-cat { width: 25%; color: var(--text-muted); font-size: 0.85rem; }
+
+        .no-results {
+            text-align: center;
+            padding: 40px;
+            color: var(--text-muted);
+            font-style: italic;
+        }
+
+        .highlight {
+            background-color: rgba(229, 169, 59, 0.3);
+            color: #fff;
+            padding: 1px 3px;
+            border-radius: 2px;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <header>
+        <div>
+            <h1>⚓ EL DICCIONARIO DE jm_capitan</h1>
+            <p class="subtitle">Buscador táctico de jerga y términos de World of Warships (Inglés → Español)</p>
+        </div>
+    </header>
+
+    <div class="controls">
+        <div class="search-box">
+            <input type="text" id="searchInput" placeholder="Escribe para buscar (ej: Citadel, HE, Ocultación, Radar)..." autofocus>
+        </div>
+        <div class="filter-box">
+            <select id="categoryFilter">
+                <option value="ALL">Todas las Categorías</option>
+                <option value="Tipos de Buques y Mecánicas">1. Tipos de Buques</option>
+                <option value="Artillería y Proyectiles">2. Artillería y Proyectiles</option>
+                <option value="Balística y Blindaje">3. Balística y Blindaje</option>
+                <option value="Torpedos y Mecánicas">4. Torpedos</option>
+                <option value="Detección y Consumibles">5. Detección y Sigilo</option>
+                <option value="Aviación y Submarinos">6. Aviación y Submarinos</option>
+                <option value="Táctica y Posicionamiento">7. Táctica y Posicionamiento</option>
+                <option value="Modos y Economía">8. Modos y Economía</option>
+            </select>
+        </div>
+    </div>
+
+    <div class="stats-bar">
+        <span>Términos encontrados: <span id="matchCount" class="badge">180</span></span>
+        <span>Pulsa <kbd>ESC</kbd> para limpiar la búsqueda</span>
+    </div>
+
+    <div class="table-container">
+        <table>
+            <thead>
+                <tr>
+                    <th class="col-id">#</th>
+                    <th class="col-term">Inglés / Jerga WoWS</th>
+                    <th class="col-es">Español de España</th>
+                    <th class="col-cat">Categoría</th>
+                </tr>
+            </thead>
+            <tbody id="dictionaryBody">
+                <!-- Los términos se cargan dinámicamente -->
+            </tbody>
+        </table>
+        <div id="noResults" class="no-results" style="display: none;">
+            No se encontraron términos que coincidan con la búsqueda.
+        </div>
+    </div>
+</div>
+
+<script>
+const dictionary = [
+    // 1. Tipos de Buques
+    {id: 1, term: "BB", es: "Acorazado", cat: "Tipos de Buques y Mecánicas"},
+    {id: 2, term: "Cruiser / CA / CL", es: "Crucero", cat: "Tipos de Buques y Mecánicas"},
+    {id: 3, term: "CA", es: "Crucero pesado", cat: "Tipos de Buques y Mecánicas"},
+    {id: 4, term: "CL", es: "Crucero ligero", cat: "Tipos de Buques y Mecánicas"},
+    {id: 5, term: "DD", es: "Destructor", cat: "Tipos de Buques y Mecánicas"},
+    {id: 6, term: "CV", es: "Portaaviones", cat: "Tipos de Buques y Mecánicas"},
+    {id: 7, term: "Sub / SS", es: "Submarino", cat: "Tipos de Buques y Mecánicas"},
+    {id: 8, term: "Warship", es: "Buque de guerra", cat: "Tipos de Buques y Mecánicas"},
+    {id: 9, term: "Premium ship", es: "Barco premium", cat: "Tipos de Buques y Mecánicas"},
+    {id: 10, term: "Tech-tree ship", es: "Barco de línea", cat: "Tipos de Buques y Mecánicas"},
+    {id: 11, term: "Tier", es: "Nivel", cat: "Tipos de Buques y Mecánicas"},
+    {id: 12, term: "Tier X / T10", es: "Nivel X", cat: "Tipos de Buques y Mecánicas"},
+    {id: 13, term: "Matchmaking / MM", es: "Emparejamiento", cat: "Tipos de Buques y Mecánicas"},
+    {id: 14, term: "Battle / Match", es: "Batalla", cat: "Tipos de Buques y Mecánicas"},
+    {id: 15, term: "Player", es: "Jugador", cat: "Tipos de Buques y Mecánicas"},
+    {id: 16, term: "Team", es: "Equipo", cat: "Tipos de Buques y Mecánicas"},
+    {id: 17, term: "Red / Enemy", es: "Enemigo", cat: "Tipos de Buques y Mecánicas"},
+    {id: 18, term: "Ally / Friendly", es: "Aliado", cat: "Tipos de Buques y Mecánicas"},
+    {id: 19, term: "Noob / Newbie", es: "Novato", cat: "Tipos de Buques y Mecánicas"},
+    {id: 20, term: "Unicum", es: "Jugador de élite", cat: "Tipos de Buques y Mecánicas"},
+
+    // 2. Artillería y Proyectiles
+    {id: 21, term: "AP", es: "Perforante", cat: "Artillería y Proyectiles"},
+    {id: 22, term: "HE", es: "Alto explosivo", cat: "Artillería y Proyectiles"},
+    {id: 23, term: "SAP", es: "Semiperforante", cat: "Artillería y Proyectiles"},
+    {id: 24, term: "HE shell", es: "Proyectil explosivo", cat: "Artillería y Proyectiles"},
+    {id: 25, term: "AP shell", es: "Proyectil perforante", cat: "Artillería y Proyectiles"},
+    {id: 26, term: "Salvo", es: "Salva", cat: "Artillería y Proyectiles"},
+    {id: 27, term: "Single shot", es: "Disparo individual", cat: "Artillería y Proyectiles"},
+    {id: 28, term: "Main battery", es: "Batería principal", cat: "Artillería y Proyectiles"},
+    {id: 29, term: "Secondaries", es: "Artillería secundaria", cat: "Artillería y Proyectiles"},
+    {id: 30, term: "AA", es: "Artillería antiaérea", cat: "Artillería y Proyectiles"},
+    {id: 31, term: "Rate of fire / ROF", es: "Cadencia de fuego", cat: "Artillería y Proyectiles"},
+    {id: 32, term: "Reload", es: "Tiempo de recarga", cat: "Artillería y Proyectiles"},
+    {id: 33, term: "Range", es: "Alcance", cat: "Artillería y Proyectiles"},
+    {id: 34, term: "Caliber", es: "Calibre", cat: "Artillería y Proyectiles"},
+    {id: 35, term: "Alpha damage", es: "Daño máximo", cat: "Artillería y Proyectiles"},
+    {id: 36, term: "DPM", es: "Daño por minuto", cat: "Artillería y Proyectiles"},
+    {id: 37, term: "Potential damage", es: "Daño potencial", cat: "Artillería y Proyectiles"},
+    {id: 38, term: "Average damage", es: "Daño medio", cat: "Artillería y Proyectiles"},
+    {id: 39, term: "Accuracy", es: "Precisión", cat: "Artillería y Proyectiles"},
+    {id: 40, term: "Dispersion", es: "Dispersión", cat: "Artillería y Proyectiles"},
+    {id: 41, term: "Sigma", es: "Sigma", cat: "Artillería y Proyectiles"},
+
+    // 3. Balística y Blindaje
+    {id: 42, term: "Overpen / Overpenetration", es: "Sobrepenetración", cat: "Balística y Blindaje"},
+    {id: 43, term: "Full pen", es: "Penetración completa", cat: "Balística y Blindaje"},
+    {id: 44, term: "Non-pen", es: "No penetración", cat: "Balística y Blindaje"},
+    {id: 45, term: "Bounce / Ricochet", es: "Rebote", cat: "Balística y Blindaje"},
+    {id: 46, term: "Ricochet angle", es: "Ángulo de rebote", cat: "Balística y Blindaje"},
+    {id: 47, term: "Overmatch", es: "Superación de blindaje", cat: "Balística y Blindaje"},
+    {id: 48, term: "Citadel / Cit", es: "Ciudadela", cat: "Balística y Blindaje"},
+    {id: 49, term: "Cit", es: "Impacto de ciudadela", cat: "Balística y Blindaje"},
+    {id: 50, term: "Armor", es: "Blindaje", cat: "Balística y Blindaje"},
+    {id: 51, term: "Bow armor", es: "Blindaje de proa", cat: "Balística y Blindaje"},
+    {id: 52, term: "Stern armor", es: "Blindaje de popa", cat: "Balística y Blindaje"},
+    {id: 53, term: "Side armor", es: "Blindaje lateral", cat: "Balística y Blindaje"},
+    {id: 54, term: "Broadside", es: "Costado expuesto", cat: "Balística y Blindaje"},
+    {id: 55, term: "Fire", es: "Incendio", cat: "Balística y Blindaje"},
+    {id: 56, term: "Fire chance", es: "Probabilidad de incendio", cat: "Balística y Blindaje"},
+    {id: 57, term: "Flood / Flooding", es: "Inundación", cat: "Balística y Blindaje"},
+    {id: 58, term: "DoT", es: "Daño en el tiempo", cat: "Balística y Blindaje"},
+    {id: 59, term: "Saturation", es: "Saturación", cat: "Balística y Blindaje"},
+    {id: 60, term: "Dev Strike", es: "Golpe devastador", cat: "Balística y Blindaje"},
+    {id: 61, term: "One-shot", es: "Destrucción de un solo golpe", cat: "Balística y Blindaje"},
+    {id: 62, term: "Critical damage", es: "Daño crítico", cat: "Balística y Blindaje"},
+
+    // 4. Torpedos
+    {id: 63, term: "Torpedo", es: "Torpedo", cat: "Torpedos y Mecánicas"},
+    {id: 64, term: "Torpedo tubes", es: "Tubos lanzatorpedos", cat: "Torpedos y Mecánicas"},
+    {id: 65, term: "Torpedo range", es: "Alcance de torpedos", cat: "Torpedos y Mecánicas"},
+    {id: 66, term: "Torpedo speed", es: "Velocidad del torpedo", cat: "Torpedos y Mecánicas"},
+    {id: 67, term: "Torpedo reload", es: "Recarga de torpedos", cat: "Torpedos y Mecánicas"},
+    {id: 68, term: "Homing torpedo", es: "Torpedo guiado", cat: "Torpedos y Mecánicas"},
+    {id: 69, term: "Dumb torpedo", es: "Torpedo no guiado", cat: "Torpedos y Mecánicas"},
+    {id: 70, term: "Torp launch", es: "Lanzamiento de torpedos", cat: "Torpedos y Mecánicas"},
+    {id: 71, term: "Torp strike", es: "Ataque de torpedos", cat: "Torpedos y Mecánicas"},
+    {id: 72, term: "Torp wall", es: "Cortina de torpedos", cat: "Torpedos y Mecánicas"},
+    {id: 73, term: "Dodge torps", es: "Esquivar torpedos", cat: "Torpedos y Mecánicas"},
+    {id: 74, term: "Torp from smoke", es: "Lanzar torpedos desde el humo", cat: "Torpedos y Mecánicas"},
+
+    // 5. Detección y Consumibles
+    {id: 75, term: "Detection", es: "Detección", cat: "Detección y Consumibles"},
+    {id: 76, term: "Concealment", es: "Ocultación", cat: "Detección y Consumibles"},
+    {id: 77, term: "Spotted", es: "Detectado", cat: "Detección y Consumibles"},
+    {id: 78, term: "Detectability", es: "Detectabilidad", cat: "Detección y Consumibles"},
+    {id: 79, term: "Perma-spot", es: "Mantener detectado", cat: "Detección y Consumibles"},
+    {id: 80, term: "Spotting range", es: "Alcance de detección", cat: "Detección y Consumibles"},
+    {id: 81, term: "Radar spotted", es: "Detectado por radar", cat: "Detección y Consumibles"},
+    {id: 82, term: "Hydro spotted", es: "Detectado por hidro", cat: "Detección y Consumibles"},
+    {id: 83, term: "Radar", es: "Radar", cat: "Detección y Consumibles"},
+    {id: 84, term: "Hydro", es: "Hidro", cat: "Detección y Consumibles"},
+    {id: 85, term: "Spotter", es: "Avión de reconocimiento", cat: "Detección y Consumibles"},
+    {id: 86, term: "Fighter", es: "Caza", cat: "Detección y Consumibles"},
+    {id: 87, term: "Air detection", es: "Detectabilidad aérea", cat: "Detección y Consumibles"},
+    {id: 88, term: "Surface detection", es: "Detectabilidad de superficie", cat: "Detección y Consumibles"},
+    {id: 89, term: "Smoke", es: "Humo", cat: "Detección y Consumibles"},
+    {id: 90, term: "Smoke screen", es: "Cortina de humo", cat: "Detección y Consumibles"},
+    {id: 91, term: "Smoke firing", es: "Disparar desde el humo", cat: "Detección y Consumibles"},
+    {id: 92, term: "Engine Boost", es: "Impulso de motor", cat: "Detección y Consumibles"},
+    {id: 93, term: "Repair Party / Heal", es: "Equipo de reparación", cat: "Detección y Consumibles"},
+    {id: 94, term: "DCP", es: "Equipo de control de daños", cat: "Detección y Consumibles"},
+    {id: 95, term: "Catapult Fighter", es: "Caza de catapulta", cat: "Detección y Consumibles"},
+
+    // 6. Aviación y Submarinos
+    {id: 96, term: "Attack aircraft", es: "Avión de ataque", cat: "Aviación y Submarinos"},
+    {id: 97, term: "Bomber", es: "Bombardero", cat: "Aviación y Submarinos"},
+    {id: 98, term: "Dive bomber", es: "Bombardero en picado", cat: "Aviación y Submarinos"},
+    {id: 99, term: "Torpedo bomber", es: "Avión torpedero", cat: "Aviación y Submarinos"},
+    {id: 100, term: "Squadron", es: "Escuadrón", cat: "Aviación y Submarinos"},
+    {id: 101, term: "Airstrike", es: "Ataque aéreo", cat: "Aviación y Submarinos"},
+    {id: 102, term: "ASW", es: "Guerra antisubmarina", cat: "Aviación y Submarinos"},
+    {id: 103, term: "Depth charges", es: "Cargas de profundidad", cat: "Aviación y Submarinos"},
+    {id: 104, term: "ASW bomb", es: "Bomba antisubmarina", cat: "Aviación y Submarinos"},
+    {id: 105, term: "Submerged sub", es: "Submarino sumergido", cat: "Aviación y Submarinos"},
+    {id: 106, term: "Depth", es: "Profundidad", cat: "Aviación y Submarinos"},
+    {id: 107, term: "Battery", es: "Carga de batería", cat: "Aviación y Submarinos"},
+    {id: 108, term: "Sonar", es: "Sonar", cat: "Aviación y Submarinos"},
+    {id: 109, term: "Ping", es: "Pulso de sonar", cat: "Aviación y Submarinos"},
+    {id: 110, term: "Pinged", es: "Marcado por sonar", cat: "Aviación y Submarinos"},
+
+    // 7. Táctica y Posicionamiento
+    {id: 111, term: "Cap", es: "Zona de captura", cat: "Táctica y Posicionamiento"},
+    {id: 112, term: "Cap / Capping", es: "Capturar", cat: "Táctica y Posicionamiento"},
+    {id: 113, term: "Capping", es: "Capturando", cat: "Táctica y Posicionamiento"},
+    {id: 114, term: "Capture point", es: "Punto de captura", cat: "Táctica y Posicionamiento"},
+    {id: 115, term: "Flank", es: "Flanco", cat: "Táctica y Posicionamiento"},
+    {id: 116, term: "Flanking", es: "Ataque por el flanco", cat: "Táctica y Posicionamiento"},
+    {id: 117, term: "Crossfire", es: "Fuego cruzado", cat: "Táctica y Posicionamiento"},
+    {id: 118, term: "Push", es: "Avance", cat: "Táctica y Posicionamiento"},
+    {id: 119, term: "Hard push", es: "Avance agresivo", cat: "Táctica y Posicionamiento"},
+    {id: 120, term: "Retreat", es: "Retroceso", cat: "Táctica y Posicionamiento"},
+    {id: 121, term: "Kiting", es: "Combate en retirada", cat: "Táctica y Posicionamiento"},
+    {id: 122, term: "Kite", es: "Combatir manteniendo distancia", cat: "Táctica y Posicionamiento"},
+    {id: 123, term: "Bow-in", es: "Entrar de proa", cat: "Táctica y Posicionamiento"},
+    {id: 124, term: "Stern-in", es: "Mostrar la popa", cat: "Táctica y Posicionamiento"},
+    {id: 125, term: "Angling", es: "Presentar el blindaje en ángulo", cat: "Táctica y Posicionamiento"},
+    {id: 126, term: "Broadside", es: "Costado", cat: "Táctica y Posicionamiento"},
+    {id: 127, term: "Show broadside", es: "Exponer el costado", cat: "Táctica y Posicionamiento"},
+    {id: 128, term: "Long range", es: "Combate a larga distancia", cat: "Táctica y Posicionamiento"},
+    {id: 129, term: "Close quarters", es: "Combate a corta distancia", cat: "Táctica y Posicionamiento"},
+    {id: 130, term: "Brawl", es: "Combate cuerpo a cuerpo", cat: "Táctica y Posicionamiento"},
+    {id: 131, term: "Area denial", es: "Negación de zona", cat: "Táctica y Posicionamiento"},
+    {id: 132, term: "Map control", es: "Control del mapa", cat: "Táctica y Posicionamiento"},
+    {id: 133, term: "Line of sight / LoS", es: "Línea de visión", cat: "Táctica y Posicionamiento"},
+    {id: 134, term: "Break LoS", es: "Romper línea de visión", cat: "Táctica y Posicionamiento"},
+    {id: 135, term: "Island hugging", es: "Jugar pegado a una isla", cat: "Táctica y Posicionamiento"},
+    {id: 136, term: "Positioning", es: "Posicionamiento", cat: "Táctica y Posicionamiento"},
+    {id: 137, term: "Focus fire", es: "Concentrar el fuego", cat: "Táctica y Posicionamiento"},
+    {id: 138, term: "Priority target", es: "Objetivo prioritario", cat: "Táctica y Posicionamiento"},
+    {id: 139, term: "Switch target", es: "Cambiar de objetivo", cat: "Táctica y Posicionamiento"},
+    {id: 140, term: "Focused", es: "Bajo fuego concentrado", cat: "Táctica y Posicionamiento"},
+    {id: 141, term: "Bait", es: "Cebo", cat: "Táctica y Posicionamiento"},
+    {id: 142, term: "Decoy", es: "Señuelo", cat: "Táctica y Posicionamiento"},
+    {id: 143, term: "Damage farming", es: "Acumular daño", cat: "Táctica y Posicionamiento"},
+    {id: 144, term: "Kill steal / KS", es: "Quitar una baja", cat: "Táctica y Posicionamiento"},
+    {id: 145, term: "Kill", es: "Destrucción", cat: "Táctica y Posicionamiento"},
+    {id: 146, term: "Finishing blow", es: "Golpe final", cat: "Táctica y Posicionamiento"},
+    {id: 147, term: "Survive", es: "Sobrevivir", cat: "Táctica y Posicionamiento"},
+    {id: 148, term: "Sunk", es: "Hundido", cat: "Táctica y Posicionamiento"},
+    {id: 149, term: "Early death", es: "Hundirse prematuramente", cat: "Táctica y Posicionamiento"},
+    {id: 150, term: "AFK", es: "Ausente / Inactivo", cat: "Táctica y Posicionamiento"},
+    {id: 151, term: "DC", es: "Desconectado", cat: "Táctica y Posicionamiento"},
+
+    // 8. Modos y Economía
+    {id: 152, term: "Randoms", es: "Batallas aleatorias", cat: "Modos y Economía"},
+    {id: 153, term: "Coop", es: "Cooperativas", cat: "Modos y Economía"},
+    {id: 154, term: "Ranked", es: "Batallas clasificatorias", cat: "Modos y Economía"},
+    {id: 155, term: "Clan Battle / CB", es: "Batalla de clanes", cat: "Modos y Economía"},
+    {id: 156, term: "Operations", es: "Operaciones", cat: "Modos y Economía"},
+    {id: 157, term: "Mission", es: "Misión", cat: "Modos y Economía"},
+    {id: 158, term: "Combat mission", es: "Misión de combate", cat: "Modos y Economía"},
+    {id: 159, term: "Season", es: "Temporada", cat: "Modos y Economía"},
+    {id: 160, term: "Event", es: "Evento", cat: "Modos y Economía"},
+    {id: 161, term: "Buff", es: "Mejora", cat: "Modos y Economía"},
+    {id: 162, term: "Nerf", es: "Reducción / Empeoramiento", cat: "Modos y Economía"},
+    {id: 163, term: "OP", es: "Muy potente / Desbalanceado", cat: "Modos y Economía"},
+    {id: 164, term: "UP", es: "Poco potente", cat: "Modos y Economía"},
+    {id: 165, term: "Work in progress / WIP", es: "En desarrollo", cat: "Modos y Economía"},
+    {id: 166, term: "Cooldown", es: "Tiempo de recarga", cat: "Modos y Economía"},
+    {id: 167, term: "Pop", es: "Activar / Usar", cat: "Modos y Economía"},
+    {id: 168, term: "Ready", es: "Disponible", cat: "Modos y Economía"},
+    {id: 169, term: "Cooldown", es: "Tiempo hasta volver a usar", cat: "Modos y Economía"},
+    {id: 170, term: "OOR", es: "Fuera de alcance", cat: "Modos y Economía"},
+    {id: 171, term: "In range", es: "Dentro de alcance", cat: "Modos y Economía"},
+    {id: 172, term: "XP / EXP", es: "Experiencia", cat: "Modos y Economía"},
+    {id: 173, term: "Free XP / FXP", es: "Experiencia libre", cat: "Modos y Economía"},
+    {id: 174, term: "Commander XP / CXP", es: "Experiencia del comandante", cat: "Modos y Economía"},
+    {id: 175, term: "Credits", es: "Créditos", cat: "Modos y Economía"},
+    {id: 176, term: "Coal", es: "Carbón", cat: "Modos y Economía"},
+    {id: 177, term: "Steel", es: "Acero", cat: "Modos y Economía"},
+    {id: 178, term: "Research Points / RP", es: "Puntos de investigación", cat: "Modos y Economía"},
+    {id: 179, term: "Doubloons", es: "Doblones", cat: "Modos y Economía"},
+    {id: 180, term: "Supercontainer / SC", es: "Supercontenedor", cat: "Modos y Economía"}
+];
+
+const searchInput = document.getElementById('searchInput');
+const categoryFilter = document.getElementById('categoryFilter');
+const dictionaryBody = document.getElementById('dictionaryBody');
+const matchCount = document.getElementById('matchCount');
+const noResults = document.getElementById('noResults');
+
+function renderTable(data, query = "") {
+    dictionaryBody.innerHTML = "";
+    
+    if (data.length === 0) {
+        noResults.style.display = "block";
+        matchCount.textContent = "0";
+        return;
+    }
+
+    noResults.style.display = "none";
+    matchCount.textContent = data.length;
+
+    data.forEach(item => {
+        const row = document.createElement('tr');
+        
+        let termHTML = highlightText(item.term, query);
+        let esHTML = highlightText(item.es, query);
+
+        row.innerHTML = `
+            <td class="col-id">${item.id}</td>
+            <td class="col-term">${termHTML}</td>
+            <td class="col-es">${esHTML}</td>
+            <td class="col-cat">${item.cat}</td>
+        `;
+        dictionaryBody.appendChild(row);
+    });
+}
+
+function highlightText(text, query) {
+    if (!query) return text;
+    const regex = new RegExp(`(${escapeRegExp(query)})`, 'gi');
+    return text.replace(regex, '<span class="highlight">$1</span>');
+}
+
+function escapeRegExp(string) {
+    return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+function filterData() {
+    const query = searchInput.value.toLowerCase().trim();
+    const selectedCategory = categoryFilter.value;
+
+    const filtered = dictionary.filter(item => {
+        const matchesCategory = selectedCategory === "ALL" || item.cat === selectedCategory;
+        const matchesQuery = item.term.toLowerCase().includes(query) || 
+                             item.es.toLowerCase().includes(query) ||
+                             item.id.toString() === query;
+        return matchesCategory && matchesQuery;
+    });
+
+    renderTable(filtered, query);
+}
+
+// Event Listeners
+searchInput.addEventListener('input', filterData);
+categoryFilter.addEventListener('change', filterData);
+
+document.addEventListener('keydown', (e) => {
+    if (e.key === "Escape") {
+        searchInput.value = "";
+        filterData();
+        searchInput.focus();
+    }
+});
+
+// Inicialización
+renderTable(dictionary);
+</script>
+
+</body>
+</html>
